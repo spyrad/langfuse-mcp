@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Model Context Protocol (MCP) server providing read-only access to Langfuse observability data. It exposes Langfuse API endpoints as MCP tools for use with Claude Code and other MCP-compatible clients.
+Read-only MCP server exposing Langfuse observability data (scores, traces, datasets, sessions, observations) as MCP tools via FastAPI. No write operations to Langfuse.
 
 ## Development Commands
 
@@ -22,6 +22,8 @@ uvicorn src.main:app --host localhost --port 8010 --reload
 uvicorn src.main:app --host 0.0.0.0 --port 8010
 ```
 
+No test suite exists. No linter/formatter configured.
+
 ## Configuration
 
 Copy `.env.dist` to `.env` and configure:
@@ -37,41 +39,35 @@ Copy `.env.dist` to `.env` and configure:
 
 ## Architecture
 
-```
-src/
-├── main.py              # FastAPI app + MCP setup, all endpoint definitions
-├── config.py            # Pydantic-settings configuration
-└── langfuse/
-    ├── client.py        # Async httpx client wrapping Langfuse REST API
-    └── typing.py        # TypedDict response schemas
-```
+All MCP tools are defined as FastAPI `GET` routes in `main.py`. `fastapi-mcp` automatically exposes these as MCP tools. Health/ready endpoints are excluded via `exclude_operations`.
 
-### Key Design Decisions
+### Request Flow
 
-- **Read-only API**: No write operations to Langfuse
-- **Single entry point**: All MCP tools defined in `main.py` as FastAPI routes
-- **Async throughout**: Uses `httpx.AsyncClient` for non-blocking API calls
-- **HTTP middleware**: Custom middleware in `main.py` handles MCP-specific routes (`/mcp/ready`, `/resources/list`, `/resources/read`, `/prompts/list`)
+1. All requests hit the HTTP middleware in `main.py` first
+2. MCP protocol requests (`POST /mcp`) are intercepted by middleware for: `/ready`, `/resources/list`, `/resources/read`, `/prompts/list`, `/ping`
+3. MCP tool calls are forwarded to FastAPI route handlers
+4. Route handlers call `LangfuseClient` methods, which all funnel through `client.py:_request()` — the single point for HTTP calls to Langfuse
 
-### MCP Integration
+### Key Patterns
 
-The server uses `fastapi-mcp` to expose FastAPI routes as MCP tools. Health/ready endpoints are excluded from MCP tool listing via `exclude_operations`.
+- **Global singleton client**: `LangfuseClient` is lazily created via `get_langfuse_client()` in `main.py`, closed on shutdown via lifespan handler
+- **Parameter name mapping**: Python snake_case params are mapped to Langfuse camelCase in `client.py` (e.g., `trace_id` → `traceId`, `from_timestamp` → `fromTimestamp`)
+- **Settings**: `config.py` uses `pydantic-settings` with `@lru_cache` — settings are loaded once from `.env` and cached
+- **Response types**: `typing.py` defines `TypedDict` schemas matching Langfuse API responses (all use `total=False` for optional fields)
+- **Error handling**: `LangfuseClientError` wraps httpx errors with status codes, route handlers convert these to `HTTPException`
 
-MCP resources are defined inline in `main.py`:
-- `langfuse://resources/openapi` - OpenAPI schema
-- `langfuse://resources/guide` - Usage guide
+### MCP Resources
 
-## API Endpoints
+Defined inline in `main.py` (not as files):
+- `langfuse://resources/openapi` — serves the live OpenAPI schema
+- `langfuse://resources/guide` — serves `MCP_DESCRIPTION` as markdown
 
-| Tool | Description |
-|------|-------------|
-| `list_scores` / `get_score` | Evaluation scores and metrics |
-| `list_traces` / `get_trace` | Full LLM interaction traces |
-| `list_datasets` / `get_dataset` / `list_dataset_runs` | Evaluation datasets |
-| `list_sessions` / `get_session` | Grouped traces by session |
-| `list_observations` / `get_observation` | Individual observations (generations, spans, events) |
+## Adding a New Endpoint
 
-All list endpoints support pagination (`page`, `limit`) and filtering parameters.
+1. Add the client method in `client.py` (follow existing pattern: params dict → `_request()` → typed response)
+2. Add TypedDict response types in `typing.py` if needed
+3. Add the FastAPI route in `main.py` (GET route with Query params, try/except LangfuseClientError)
+4. The route is automatically exposed as an MCP tool by `fastapi-mcp`
 
 ## Claude Code Integration
 

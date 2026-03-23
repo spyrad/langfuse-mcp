@@ -133,6 +133,7 @@ class LangfuseClient:
         source: str | None = None,
         operator: str | None = None,
         value: float | None = None,
+        environment: str | None = None,
     ) -> ScoreListResponse:
         """List scores with optional filters.
 
@@ -166,6 +167,7 @@ class LangfuseClient:
             "source": source,
             "operator": operator,
             "value": value,
+            "environment": environment,
         }
         result = await self._request("GET", "/api/public/scores", params=params)
         return ScoreListResponse(data=result.get("data", []), meta=result.get("meta", {}))
@@ -197,6 +199,7 @@ class LangfuseClient:
         tags: list[str] | None = None,
         version: str | None = None,
         release: str | None = None,
+        environment: str | None = None,
     ) -> TraceListResponse:
         """List traces with optional filters.
 
@@ -227,6 +230,7 @@ class LangfuseClient:
             "orderBy": order_by,
             "version": version,
             "release": release,
+            "environment": environment,
         }
         # Handle tags as repeated query params
         if tags:
@@ -315,6 +319,7 @@ class LangfuseClient:
         limit: int | None = None,
         from_timestamp: str | None = None,
         to_timestamp: str | None = None,
+        environment: str | None = None,
     ) -> SessionListResponse:
         """List sessions with optional filters.
 
@@ -332,6 +337,7 @@ class LangfuseClient:
             "limit": limit,
             "fromTimestamp": from_timestamp,
             "toTimestamp": to_timestamp,
+            "environment": environment,
         }
         result = await self._request("GET", "/api/public/sessions", params=params)
         return SessionListResponse(data=result.get("data", []), meta=result.get("meta", {}))
@@ -362,6 +368,7 @@ class LangfuseClient:
         to_start_time: str | None = None,
         parent_observation_id: str | None = None,
         version: str | None = None,
+        environment: str | None = None,
     ) -> ObservationListResponse:
         """List observations (v2 API) with optional filters.
 
@@ -391,6 +398,7 @@ class LangfuseClient:
             "toStartTime": to_start_time,
             "parentObservationId": parent_observation_id,
             "version": version,
+            "environment": environment,
         }
         result = await self._request("GET", "/api/public/v2/observations", params=params)
         return ObservationListResponse(data=result.get("data", []), meta=result.get("meta", {}))

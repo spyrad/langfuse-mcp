@@ -254,6 +254,9 @@ async def list_scores(
     to_timestamp: str | None = Query(
         None, description="Filter to timestamp (ISO 8601)"
     ),
+    environment: str | None = Query(
+        None, description="Filter by environment (e.g. development, production, default)"
+    ),
 ) -> dict:
     """Liste Scores mit optionalen Filtern.
 
@@ -276,6 +279,7 @@ async def list_scores(
             source=source,
             from_timestamp=from_timestamp,
             to_timestamp=to_timestamp,
+            environment=environment,
         )
         return dict(result)
     except LangfuseClientError as e:
@@ -317,6 +321,9 @@ async def list_traces(
     ),
     version: str | None = Query(None, description="Filter by version"),
     release: str | None = Query(None, description="Filter by release"),
+    environment: str | None = Query(
+        None, description="Filter by environment (e.g. development, production, default)"
+    ),
 ) -> dict:
     """Liste Traces mit optionalen Filtern.
 
@@ -339,6 +346,7 @@ async def list_traces(
             to_timestamp=to_timestamp,
             version=version,
             release=release,
+            environment=environment,
         )
         return dict(result)
     except LangfuseClientError as e:
@@ -443,6 +451,9 @@ async def list_sessions(
     to_timestamp: str | None = Query(
         None, description="Filter to timestamp (ISO 8601)"
     ),
+    environment: str | None = Query(
+        None, description="Filter by environment (e.g. development, production, default)"
+    ),
 ) -> dict:
     """Liste alle Sessions.
 
@@ -460,6 +471,7 @@ async def list_sessions(
             limit=limit,
             from_timestamp=from_timestamp,
             to_timestamp=to_timestamp,
+            environment=environment,
         )
         return dict(result)
     except LangfuseClientError as e:
@@ -503,6 +515,9 @@ async def list_observations(
         None, description="Filter to start time (ISO 8601)"
     ),
     version: str | None = Query(None, description="Filter by version"),
+    environment: str | None = Query(
+        None, description="Filter by environment (e.g. development, production, default)"
+    ),
 ) -> dict:
     """Liste Observations mit optionalen Filtern (v2 API).
 
@@ -527,6 +542,7 @@ async def list_observations(
             from_start_time=from_start_time,
             to_start_time=to_start_time,
             version=version,
+            environment=environment,
         )
         return dict(result)
     except LangfuseClientError as e:
